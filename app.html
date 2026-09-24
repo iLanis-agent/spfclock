@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPFClock - App</title>
+<style>
+  :root { --bg:#141008; --card:#20180c; --edge:#3a2f1a; --ink:#f4ede0; --dim:#b0a58f; --accent:#ff9d3c; --good:#5ecf7a; --warn:#ffcf3c; --bad:#e05555; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; padding:28px 18px 60px; }
+  .wrap { max-width:760px; margin:0 auto; }
+  header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:22px; }
+  h1 { font-size:1.5rem; } h1 .c { color:var(--accent); }
+  a.home { color:var(--dim); text-decoration:none; font-size:0.9rem; }
+  section { background:var(--card); border:1px solid var(--edge); border-radius:14px; padding:20px; margin-bottom:20px; }
+  h2 { font-size:1.05rem; margin-bottom:14px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  .field { display:flex; flex-direction:column; gap:5px; flex:1; min-width:120px; }
+  label { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.6px; color:var(--dim); }
+  input, select, button { font:inherit; border-radius:8px; border:1px solid var(--edge); padding:10px 12px; background:#141008; color:var(--ink); }
+  input:focus, select:focus { outline:none; border-color:var(--accent); }
+  button { cursor:pointer; background:var(--accent); border:none; color:#241300; font-weight:700; }
+  button:hover { filter:brightness(1.1); }
+  .clock { text-align:center; padding:10px 0 4px; }
+  .clock .big { font-size:3.4rem; font-weight:800; letter-spacing:-1px; }
+  .clock.protected .big { color:var(--good); }
+  .clock.warn .big { color:var(--warn); }
+  .clock.expired .big { color:var(--bad); }
+  .clock .sub { color:var(--dim); margin-top:6px; font-size:0.95rem; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .stat { background:#141008; border:1px solid var(--edge); border-radius:10px; padding:14px; }
+  .stat .v { font-size:1.35rem; font-weight:700; color:var(--accent); }
+  .stat .l { color:var(--dim); font-size:0.78rem; margin-top:3px; }
+  .log { display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--edge); flex-wrap:wrap; }
+  .log:last-child { border-bottom:none; }
+  .log .t { font-weight:600; min-width:70px; }
+  .log .meta { color:var(--dim); font-size:0.85rem; flex:1; }
+  .log button.act { background:transparent; border:1px solid var(--edge); color:var(--dim); font-weight:400; font-size:0.8rem; padding:5px 10px; }
+  .log button.act:hover { color:var(--ink); border-color:var(--accent); }
+  .empty { color:var(--dim); text-align:center; padding:18px; font-size:0.95rem; }
+  .note { color:var(--dim); font-size:0.82rem; margin-top:12px; line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>SPF<span class="c">Clock</span></h1>
+    <a class="home" href="index.html">&larr; Home</a>
+  </header>
+
+  <section>
+    <h2>You</h2>
+    <div class="row">
+      <div class="field" style="flex:2"><label>Skin type (Fitzpatrick)</label>
+        <select id="f-skin"></select>
+      </div>
+      <div class="field"><label>SPF</label><input id="f-spf" type="number" min="1" max="100" step="1" value="30"></div>
+    </div>
+    <div class="note" id="window-note"></div>
+  </section>
+
+  <section>
+    <h2>Log an application</h2>
+    <div class="row">
+      <div class="field"><label>Activity</label>
+        <select id="f-activity"><option value="dry">Relaxing (dry)</option><option value="sweat">Sport / sweating</option><option value="swim">Swimming</option></select>
+      </div>
+      <div class="field" style="flex:0 0 auto; justify-content:flex-end"><button id="f-apply">Applied just now</button></div>
+    </div>
+  </section>
+
+  <section id="clock-section" style="display:none">
+    <h2>Current protection</h2>
+    <div class="clock protected" id="clock">
+      <div class="big" id="clock-big">--:--</div>
+      <div class="sub" id="clock-sub"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Today so far</h2>
+    <div class="stats">
+      <div class="stat"><div class="v" id="s-apps">0</div><div class="l">applications logged</div></div>
+      <div class="stat"><div class="v" id="s-hours">0</div><div class="l">protected hours today</div></div>
+      <div class="stat"><div class="v" id="s-window">-</div><div class="l">your dry-weather window</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Log</h2>
+    <div id="list"><div class="empty">No applications yet. Log your first one above.</div></div>
+  </section>
+
+  <p class="note">Estimates based on standard reapply guidance (2 hours dry, 40-80 minutes in water or heavy sweat). Always follow your sunscreen's label and reapply after towel-drying.</p>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  var KEY = 'spfclock-log';
+  var PREF = 'spfclock-prefs';
+  var $ = function (id) { return document.getElementById(id); };
+
+  function loadLog() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; }
+  }
+  function saveLog(list) { localStorage.setItem(KEY, JSON.stringify(list)); }
+  function loadPrefs() {
+    try { return JSON.parse(localStorage.getItem(PREF)) || {}; } catch (e) { return {}; }
+  }
+  function savePrefs(p) { localStorage.setItem(PREF, JSON.stringify(p)); }
+
+  var prefs = loadPrefs();
+  var skinSel = $('f-skin');
+  SpfEngine.SKIN.forEach(function (s) {
+    var o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = s.label;
+    skinSel.appendChild(o);
+  });
+  skinSel.value = prefs.skinId || 2;
+  $('f-spf').value = prefs.spf || 30;
+
+  function currentPrefs() {
+    return { skinId: Number(skinSel.value), spf: Number($('f-spf').value) || 30 };
+  }
+
+  function fmtClock(d) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtLeft(min) {
+    if (min < 0) return Math.abs(min) + ' min unprotected';
+    var h = Math.floor(min / 60), m = min % 60;
+    return (h > 0 ? h + 'h ' : '') + m + 'm left';
+  }
+
+  function renderWindowNote() {
+    var p = currentPrefs();
+    var dry = SpfEngine.protectionMinutes(p.skinId, p.spf, 'dry');
+    var swim = SpfEngine.protectionMinutes(p.skinId, p.spf, 'swim');
+    $('window-note').textContent = 'With SPF ' + p.spf + ' on type ' + SpfEngine.skinById(p.skinId).label.split(' ')[0] +
+      ' skin: about ' + dry + ' min protected on a dry day, ' + swim + ' min while swimming.';
+    $('s-window').textContent = dry + ' min';
+  }
+
+  var timer = null;
+
+  function render() {
+    var p = currentPrefs();
+    savePrefs(p);
+    renderWindowNote();
+
+    var log = loadLog();
+    var today = new Date().toDateString();
+    var todays = log.filter(function (x) { return new Date(x.at).toDateString() === today; });
+    var st = SpfEngine.stats(todays, p.skinId, p.spf);
+    $('s-apps').textContent = st.applications;
+    $('s-hours').textContent = st.protectedHours;
+
+    var latest = todays.length ? todays[todays.length - 1] : null;
+    var cs = $('clock-section');
+    if (latest) {
+      cs.style.display = 'block';
+      var status = SpfEngine.status(new Date(latest.at), new Date(), latest.skinId, latest.spf, latest.activity);
+      var clock = $('clock');
+      clock.className = 'clock ' + (status.state === 'protected' ? 'protected' : (status.state === 'reapply-now' ? 'warn' : 'expired'));
+      $('clock-big').textContent = fmtLeft(status.minutesLeft);
+      $('clock-sub').textContent = status.state === 'expired'
+        ? 'Protection ended at ' + fmtClock(status.endsAt) + ' - reapply before going back out.'
+        : 'Reapply by ' + fmtClock(status.endsAt) + ' (' + latest.activity + ' window, SPF ' + latest.spf + ').';
+    } else {
+      cs.style.display = 'none';
+    }
+
+    var list = $('list');
+    list.innerHTML = '';
+    if (!todays.length) list.innerHTML = '<div class="empty">No applications yet. Log your first one above.</div>';
+    todays.slice().reverse().forEach(function (x) {
+      var row = document.createElement('div');
+      row.className = 'log';
+      var mins = SpfEngine.protectionMinutes(x.skinId, x.spf, x.activity);
+      row.innerHTML = '<span class="t">' + fmtClock(new Date(x.at)) + '</span>' +
+        '<span class="meta">SPF ' + x.spf + ' &middot; ' + x.activity + ' &middot; ' + mins + ' min window</span>' +
+        '<button class="act">Remove</button>';
+      row.querySelector('button').addEventListener('click', function () {
+        saveLog(loadLog().filter(function (y) { return y.id !== x.id; }));
+        render();
+      });
+      list.appendChild(row);
+    });
+
+    if (timer) clearInterval(timer);
+    timer = setInterval(renderClockOnly, 15000);
+  }
+
+  function renderClockOnly() {
+    var log = loadLog();
+    var today = new Date().toDateString();
+    var todays = log.filter(function (x) { return new Date(x.at).toDateString() === today; });
+    if (!todays.length) return;
+    var latest = todays[todays.length - 1];
+    var status = SpfEngine.status(new Date(latest.at), new Date(), latest.skinId, latest.spf, latest.activity);
+    var clock = $('clock');
+    clock.className = 'clock ' + (status.state === 'protected' ? 'protected' : (status.state === 'reapply-now' ? 'warn' : 'expired'));
+    $('clock-big').textContent = fmtLeft(status.minutesLeft);
+  }
+
+  skinSel.addEventListener('change', render);
+  $('f-spf').addEventListener('change', render);
+
+  $('f-apply').addEventListener('click', function () {
+    var p = currentPrefs();
+    var log = loadLog();
+    log.push({ id: 'a' + Date.now(), at: new Date().toISOString(), skinId: p.skinId, spf: p.spf, activity: $('f-activity').value });
+    saveLog(log);
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
