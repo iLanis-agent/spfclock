@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPFClock - Know exactly when to reapply sunscreen</title>
+<style>
+  :root { --bg:#141008; --card:#20180c; --edge:#3a2f1a; --ink:#f4ede0; --dim:#b0a58f; --accent:#ff9d3c; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:48px 20px; }
+  .wrap { max-width:680px; width:100%; }
+  h1 { font-size:2.4rem; letter-spacing:-0.5px; }
+  h1 .c { color:var(--accent); }
+  p.lede { color:var(--dim); margin:16px 0 28px; font-size:1.1rem; line-height:1.55; }
+  .feats { display:grid; gap:12px; margin-bottom:32px; }
+  .feat { background:var(--card); border:1px solid var(--edge); border-radius:12px; padding:16px 18px; }
+  .feat b { color:var(--accent); }
+  .feat p { color:var(--dim); font-size:0.95rem; margin-top:4px; }
+  a.cta { display:inline-block; background:var(--accent); color:#241300; font-weight:700; padding:14px 34px; border-radius:10px; text-decoration:none; font-size:1.05rem; }
+  a.cta:hover { filter:brightness(1.1); }
+  .foot { color:var(--dim); font-size:0.85rem; margin-top:36px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SPF<span class="c">Clock</span></h1>
+  <p class="lede">Sunscreen wears off on a schedule, and "I put some on this morning" is not a schedule. SPFClock turns your skin type, SPF and activity into a real reapply countdown you can actually follow.</p>
+  <div class="feats">
+    <div class="feat"><b>Your real protection window</b><p>Skin type x SPF, capped at the two-hour dermatologist rule, cut to 40 minutes when you swim and 80 when you sweat.</p></div>
+    <div class="feat"><b>Live reapply countdown</b><p>Log an application, get a live countdown and the exact time to reapply. The last 10 minutes turn into a warning.</p></div>
+    <div class="feat"><b>Day in the sun, tallied</b><p>Every application is logged, so you can see how many protected hours the day actually added up to.</p></div>
+    <div class="feat"><b>Private by design</b><p>No account, no location tracking. Everything stays in your browser's local storage.</p></div>
+  </div>
+  <a class="cta" href="app.html">Open SPFClock</a>
+  <p class="foot">Estimates only - follow your sunscreen's label. Part of the App Factory experiment - a new app every hour.</p>
+</div>
+</body>
+</html>
